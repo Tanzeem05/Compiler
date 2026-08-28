@@ -15,12 +15,26 @@ if command -v antlr4 >/dev/null 2>&1; then
 elif [[ -n "${ANTLR_JAR:-}" && -f "${ANTLR_JAR}" ]]; then
     java -jar "$ANTLR_JAR" -Dlanguage=Cpp -visitor -no-listener -lib . CSubset.g4
 else
-    echo "ANTLR4 generator not found." >&2
-    echo "Install antlr4 or set ANTLR_JAR=/path/to/antlr-4.x-complete.jar" >&2
-    exit 1
+    REQUIRED_GENERATED=(
+        CSubsetLexer.cpp CSubsetLexer.h
+        CSubsetParser.cpp CSubsetParser.h
+        CSubsetBaseVisitor.cpp CSubsetBaseVisitor.h
+        CSubsetVisitor.cpp CSubsetVisitor.h
+    )
+
+    for generated in "${REQUIRED_GENERATED[@]}"; do
+        if [[ ! -f "$generated" ]]; then
+            echo "ANTLR4 generator not found and $generated is missing." >&2
+            echo "Install antlr4 or set ANTLR_JAR=/path/to/antlr-4.x-complete.jar" >&2
+            exit 1
+        fi
+    done
+
+    echo "ANTLR4 generator not found; using checked-in generated sources." >&2
 fi
 
-if pkg-config --exists antlr4-runtime 2>/dev/null; then
+if command -v pkg-config >/dev/null 2>&1 && \
+   pkg-config --exists antlr4-runtime 2>/dev/null; then
     read -r -a ANTLR_CFLAGS <<< "$(pkg-config --cflags antlr4-runtime)"
     read -r -a ANTLR_LIBS <<< "$(pkg-config --libs antlr4-runtime)"
 else
@@ -44,6 +58,5 @@ g++ -std=c++17 -O2 -Wall -Wextra \
 
 ./icg.out "$INPUT"
 
-# echo "Generated code.asm and optimized_code.asm"
-# echo "Assemble with: fasm code.asm program"
-# echo "Then run:      ./program"
+echo "Assemble with: fasm mycode.asm program"
+echo "Then run:      chmod +x program && ./program"

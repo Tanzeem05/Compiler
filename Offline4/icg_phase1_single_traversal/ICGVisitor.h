@@ -10,6 +10,7 @@
 #include <fstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace std;
@@ -101,19 +102,25 @@ public:
 
 private:
     ofstream out;
+    ofstream body;
+    string outputFile;
+    string temporaryFile;
     SymbolTable symbolTable;
 
     // SymbolInfo already stores language-level information. This map only adds
     // the assembly location that the supplied symbol table does not contain.
     unordered_map<const SymbolInfo*, StorageInfo> storageOfSymbol;
     vector<StorageInfo> globals;
+    vector<pair<string, string>> exitReplacements;
 
     string currentFunction;
     string currentDeclarationType;
     string currentExitLabel;
+    string currentExitPlaceholder;
 
     int nextLocalOffset;
     int labelCounter;
+    int currentExpressionLine;
     bool nextCompoundIsFunctionBody;
 
     // ---------- symbol/storage helpers ----------
@@ -126,17 +133,21 @@ private:
 
     // ---------- assembly helpers ----------
     void emit(const string& instruction);
-    void emitRaw(const string& text = "");
+    void emitAtLine(const string& instruction, int sourceLine);
     void emitLabel(const string& label);
-    void emitLineComment(antlr4::ParserRuleContext* ctx);
+    void emitStatementLabel();
 
     void load(const StorageInfo& storage);
     void store(const StorageInfo& storage);
 
     string newLabel(const string& prefix);
+    string replaceAll(
+        string text,
+        const string& needle,
+        const string& replacement) const;
 
     void writeHeader();
-    void writePrintProcedureInclude();
+    void writePrintProcedure();
     void writeDataSegment();
 };
 

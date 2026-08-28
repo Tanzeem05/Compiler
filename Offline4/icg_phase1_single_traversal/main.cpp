@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
             return 1;
         }
 
-        // PASS 2: traverse that parse tree exactly ONCE and generate code.asm.
+        // PASS 2: traverse that parse tree exactly ONCE and generate mycode.asm.
         ICGVisitor visitor("mycode.asm");
         visitor.generate(tree);
 

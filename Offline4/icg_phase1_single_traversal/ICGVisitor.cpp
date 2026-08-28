@@ -1,18 +1,22 @@
 #include "ICGVisitor.h"
 
+#include <cstdio>
 #include <stdexcept>
 
 using namespace std;
 
 ICGVisitor::ICGVisitor(const string& outputFile)
-    : currentDeclarationType("error"),
+    : outputFile(outputFile),
+      temporaryFile(outputFile + ".tmp"),
+      currentDeclarationType("error"),
       nextLocalOffset(0),
-      labelCounter(0),
+      labelCounter(1),
+      currentExpressionLine(0),
       nextCompoundIsFunctionBody(false)
 {
-    out.open(outputFile, ios::trunc);
-    if (!out) {
-        throw runtime_error("Could not create " + outputFile);
+    body.open(temporaryFile, ios::trunc);
+    if (!body) {
+        throw runtime_error("Could not create " + temporaryFile);
     }
 
     // Root/global scope.
@@ -21,34 +25,56 @@ ICGVisitor::ICGVisitor(const string& outputFile)
 
 ICGVisitor::~ICGVisitor()
 {
+    if (body.is_open()) {
+        body.close();
+    }
     if (out.is_open()) {
         out.close();
     }
+    remove(temporaryFile.c_str());
 }
 
 void ICGVisitor::emit(const string& instruction)
 {
-    out << "    " << instruction << '\n';
+    body << '\t' << instruction << '\n';
 }
 
-void ICGVisitor::emitRaw(const string& text)
+void ICGVisitor::emitAtLine(const string& instruction, int sourceLine)
 {
-    out << text << '\n';
+    body << '\t' << instruction;
+    if (sourceLine > 0) {
+        body << "       ; Line " << sourceLine;
+    }
+    body << '\n';
 }
 
 void ICGVisitor::emitLabel(const string& label)
 {
-    out << label << ":\n";
+    body << label << ":\n";
 }
 
-void ICGVisitor::emitLineComment(antlr4::ParserRuleContext* ctx)
+void ICGVisitor::emitStatementLabel()
 {
-    out << "    ; Line " << ctx->getStart()->getLine() << '\n';
+    emitLabel(newLabel(""));
 }
 
 string ICGVisitor::newLabel(const string& prefix)
 {
-    return "L_" + prefix + "_" + to_string(labelCounter++);
+    (void)prefix;
+    return ".L" + to_string(labelCounter++);
+}
+
+string ICGVisitor::replaceAll(
+    string text,
+    const string& needle,
+    const string& replacement) const
+{
+    size_t position = 0;
+    while ((position = text.find(needle, position)) != string::npos) {
+        text.replace(position, needle.size(), replacement);
+        position += replacement.size();
+    }
+    return text;
 }
 
 string ICGVisitor::memory(const StorageInfo& storage) const
@@ -57,68 +83,91 @@ string ICGVisitor::memory(const StorageInfo& storage) const
         return "[" + storage.name + "]";
     }
 
-    return "[ebp-" + to_string(storage.offset) + "]";
+    return "[EBP-" + to_string(storage.offset) + "]";
 }
 
 void ICGVisitor::load(const StorageInfo& storage)
 {
-    emit("mov eax, " + memory(storage));
+    emitAtLine("MOV EAX, " + memory(storage), currentExpressionLine);
 }
 
 void ICGVisitor::store(const StorageInfo& storage)
 {
-    emit("mov " + memory(storage) + ", eax");
+    emit("MOV " + memory(storage) + ", EAX");
 }
 
 void ICGVisitor::writeHeader()
 {
-    emitRaw("format ELF executable 3");
-    emitRaw("entry _start");
-    emitRaw();
-    emitRaw("segment readable executable");
-    emitRaw();
-
-    emitLabel("_start");
-    emit("call main");
-    emit("mov ebx, eax");
-    emit("mov eax, 1");
-    emit("int 0x80");
-    emitRaw();
+    out << "format ELF executable 3\n";
+    out << "entry main\n";
 }
 
-void ICGVisitor::writePrintProcedureInclude()
+void ICGVisitor::writePrintProcedure()
 {
-    emitRaw();
-    emitRaw("; println helper supplied with the assignment/project");
-    emitRaw("include 'printProc.lib'");
+    out << ";-------------------------------\n";
+    out << ";         print library         \n";
+    out << ";-------------------------------\n";
+
+    // getline removes only '\n'. If printProc.lib uses CRLF, its '\r' is
+    // deliberately retained so the generated text matches the reference.
+    ifstream library("printProc.lib");
+    if (!library) {
+        throw runtime_error("Could not open printProc.lib");
+    }
+
+    string line;
+    while (getline(library, line)) {
+        out << line << '\n';
+    }
+    out << ";-------------------------------\n";
 }
 
 void ICGVisitor::writeDataSegment()
 {
-    if (globals.empty()) {
-        return;
-    }
-
-    emitRaw();
-    emitRaw("segment readable writeable");
+    out << "segment readable writeable\n";
 
     for (const StorageInfo& variable : globals) {
-        emitRaw("    ; Line " + to_string(variable.sourceLine));
-        emitRaw(variable.name + " dd 0");
+        out << '\t' << variable.name << " dd 1 DUP (0)"
+            << "       ; Line " << variable.sourceLine << '\n';
     }
 }
 
 void ICGVisitor::generate(antlr4::tree::ParseTree* tree)
 {
-    writeHeader();
-
     // This is the ONLY traversal of the parse tree.
     visit(tree);
 
-    // These are appended after traversal. We do not walk the parse tree again.
-    writePrintProcedureInclude();
+    body.flush();
+    body.close();
+
+    out.open(outputFile, ios::trunc);
+    if (!out) {
+        throw runtime_error("Could not create " + outputFile);
+    }
+
+    // Assembly is buffered during the single traversal so declarations can be
+    // placed before the executable segment, as required by the reference.
+    writeHeader();
     writeDataSegment();
+    out << "segment readable executable\n";
+
+    ifstream generatedBody(temporaryFile);
+    if (!generatedBody) {
+        throw runtime_error("Could not open " + temporaryFile);
+    }
+
+    string line;
+    while (getline(generatedBody, line)) {
+        for (const auto& replacement : exitReplacements) {
+            line = replaceAll(line, replacement.first, replacement.second);
+        }
+        out << line << '\n';
+    }
+
+    writePrintProcedure();
     out.flush();
+    generatedBody.close();
+    remove(temporaryFile.c_str());
 }
 
 // -----------------------------------------------------------------------------
@@ -172,14 +221,13 @@ void ICGVisitor::declareScalar(const string& name, int sourceLine)
         globals.push_back(storage);
     }
     else {
-        // IMPORTANT FOR THE SINGLE TRAVERSAL:
-        // Allocate each local exactly when its declaration is visited. Therefore
-        // we do not need an earlier tree pass to count all local variables.
+        // Allocate every local as soon as its declaration is visited. This
+        // preserves the single parse-tree traversal required by Phase 1.
         nextLocalOffset += 4;
         storage.global = false;
         storage.offset = nextLocalOffset;
 
-        emit("sub esp, 4");
+        emitAtLine("SUB ESP, 4", sourceLine);
     }
 
     storageOfSymbol[symbol] = storage;
@@ -211,17 +259,17 @@ any ICGVisitor::visitFunctionDefinitionWithoutParameters(
 
     string oldFunction = currentFunction;
     string oldExitLabel = currentExitLabel;
+    string oldExitPlaceholder = currentExitPlaceholder;
     int oldLocalOffset = nextLocalOffset;
 
     currentFunction = ctx->ID()->getText();
-    currentExitLabel = newLabel(currentFunction + "_exit");
+    currentExitLabel.clear();
+    currentExitPlaceholder = "__" + currentFunction + "_EXIT__";
     nextLocalOffset = 0;
 
-    emitRaw();
-    emitRaw("; Line " + to_string(ctx->getStart()->getLine()) + ": function " + currentFunction);
     emitLabel(currentFunction);
-    emit("push ebp");
-    emit("mov ebp, esp");
+    emit("PUSH EBP");
+    emit("MOV EBP, ESP");
 
     // The function body itself uses this scope. Nested compound statements
     // create their own child scopes.
@@ -229,15 +277,33 @@ any ICGVisitor::visitFunctionDefinitionWithoutParameters(
     nextCompoundIsFunctionBody = true;
     visit(ctx->compound_statement());
 
+    string fallthroughLabel = newLabel("");
+    currentExitLabel = newLabel("");
+    emitLabel(fallthroughLabel);
     emitLabel(currentExitLabel);
-    emit("mov esp, ebp");
-    emit("pop ebp");
-    emit("ret");
+    if (nextLocalOffset > 0) {
+        emit("ADD ESP, " + to_string(nextLocalOffset));
+    }
+    emit("POP EBP");
+
+    if (currentFunction == "main") {
+        // Linux i386 sys_exit takes the status in EBX. Preserve the source
+        // program's return expression before loading the syscall number.
+        emit("MOV EBX, EAX");
+        emit("MOV EAX, 1");
+        emit("INT 0x80");
+    }
+    else {
+        emit("RET");
+    }
+
+    exitReplacements.push_back({currentExitPlaceholder, currentExitLabel});
 
     symbolTable.exitScope();
 
     currentFunction = oldFunction;
     currentExitLabel = oldExitLabel;
+    currentExitPlaceholder = oldExitPlaceholder;
     nextLocalOffset = oldLocalOffset;
 
     return {};
@@ -256,9 +322,7 @@ any ICGVisitor::visitCompoundWithStatements(
     visit(ctx->statements());
 
     if (!functionBody) {
-        // We intentionally do NOT emit "add esp, ..." here. Local slots are
-        // kept until the function epilogue. This keeps one-pass stack layout
-        // simple and still stores every local through the stack as required.
+        // Local slots remain allocated until the function epilogue.
         symbolTable.exitScope();
     }
 
@@ -290,12 +354,6 @@ any ICGVisitor::visitVar_declaration(
     string oldType = currentDeclarationType;
     currentDeclarationType = ctx->type_specifier()->getText();
 
-    // For globals the actual dd declarations are emitted later in the data
-    // segment, so no executable line comment is needed here.
-    if (!currentFunction.empty()) {
-        emitLineComment(ctx);
-    }
-
     visit(ctx->declaration_list());
     currentDeclarationType = oldType;
 
@@ -325,8 +383,11 @@ any ICGVisitor::visitDeclarationScalarAppend(
 any ICGVisitor::visitExpressionStatementNormal(
     CSubsetParser::ExpressionStatementNormalContext* ctx)
 {
-    emitLineComment(ctx);
+    emitStatementLabel();
+    int oldLine = currentExpressionLine;
+    currentExpressionLine = ctx->getStart()->getLine();
     visit(ctx->expression());
+    currentExpressionLine = oldLine;
     return {};
 }
 
@@ -340,22 +401,28 @@ any ICGVisitor::visitExpressionStatementEmpty(
 any ICGVisitor::visitStatementPrintln(
     CSubsetParser::StatementPrintlnContext* ctx)
 {
-    emitLineComment(ctx);
+    emitStatementLabel();
+    int oldLine = currentExpressionLine;
+    currentExpressionLine = ctx->getStart()->getLine();
 
     StorageInfo storage = lookupStorage(ctx->ID()->getText());
     load(storage);
 
     // printProc.lib expects the integer to print in EAX.
-    emit("call print_number");
+    emit("CALL print_number");
+    currentExpressionLine = oldLine;
     return {};
 }
 
 any ICGVisitor::visitStatementReturn(
     CSubsetParser::StatementReturnContext* ctx)
 {
-    emitLineComment(ctx);
-    visit(ctx->expression());          // result -> EAX
-    emit("jmp " + currentExitLabel);
+    emitStatementLabel();
+    int oldLine = currentExpressionLine;
+    currentExpressionLine = ctx->getStart()->getLine();
+    visit(ctx->expression());
+    emit("JMP " + currentExitPlaceholder);
+    currentExpressionLine = oldLine;
     return {};
 }
 
@@ -374,12 +441,14 @@ any ICGVisitor::visitVariableScalar(
 any ICGVisitor::visitExpressionAssign(
     CSubsetParser::ExpressionAssignContext* ctx)
 {
-    // Do not visit the left variable: that would unnecessarily load its old
-    // value. Only evaluate the RHS, then store EAX into the LHS.
+    // Only evaluate the right side; loading the old left-side value is not
+    // required for assignment.
     StorageInfo left = lookupStorage(ctx->variable()->getText());
 
     visit(ctx->logic_expression());
     store(left);
+    emit("PUSH EAX");
+    emit("POP EAX");
 
     // EAX still contains the assigned value.
     return {};
@@ -392,41 +461,39 @@ any ICGVisitor::visitExpressionAssign(
 any ICGVisitor::visitLogicBinary(CSubsetParser::LogicBinaryContext* ctx)
 {
     string op = ctx->LOGICOP()->getText();
-    string shortLabel = newLabel(op == "&&" ? "and_false" : "or_true");
-    string endLabel = newLabel("logic_end");
-
-    visit(ctx->left);
-    emit("cmp eax, 0");
+    string rightLabel = newLabel("");
+    string trueLabel = newLabel("");
+    string endLabel = newLabel("");
+    string falseLabel = newLabel("");
 
     if (op == "&&") {
-        // Short circuit: if left is false, right is not evaluated.
-        emit("je " + shortLabel);
-
+        visit(ctx->left);
+        emit("CMP EAX, 0");
+        emit("JNE " + rightLabel);
+        emit("JMP " + falseLabel);
+        emitLabel(rightLabel);
         visit(ctx->right);
-        emit("cmp eax, 0");
-        emit("je " + shortLabel);
-
-        emit("mov eax, 1");
-        emit("jmp " + endLabel);
-
-        emitLabel(shortLabel);
-        emit("mov eax, 0");
+        emit("CMP EAX, 0");
+        emit("JNE " + trueLabel);
+        emit("JMP " + falseLabel);
     }
     else {
-        // Short circuit: if left is true, right is not evaluated.
-        emit("jne " + shortLabel);
-
+        visit(ctx->left);
+        emit("CMP EAX, 0");
+        emit("JNE " + trueLabel);
+        emit("JMP " + rightLabel);
+        emitLabel(rightLabel);
         visit(ctx->right);
-        emit("cmp eax, 0");
-        emit("jne " + shortLabel);
-
-        emit("mov eax, 0");
-        emit("jmp " + endLabel);
-
-        emitLabel(shortLabel);
-        emit("mov eax, 1");
+        emit("CMP EAX, 0");
+        emit("JNE " + trueLabel);
+        emit("JMP " + falseLabel);
     }
 
+    emitLabel(trueLabel);
+    emitAtLine("MOV EAX, 1", currentExpressionLine);
+    emit("JMP " + endLabel);
+    emitLabel(falseLabel);
+    emit("MOV EAX, 0");
     emitLabel(endLabel);
     return {};
 }
@@ -434,28 +501,30 @@ any ICGVisitor::visitLogicBinary(CSubsetParser::LogicBinaryContext* ctx)
 any ICGVisitor::visitRelBinary(CSubsetParser::RelBinaryContext* ctx)
 {
     visit(ctx->left);
-    emit("push eax");
-
+    emit("PUSH EAX");
     visit(ctx->right);
-    emit("mov ebx, eax");
-    emit("pop eax");
-    emit("cmp eax, ebx");
+    emit("MOV EDX, EAX");
+    emit("POP EAX");
+    emit("CMP EAX, EDX");
 
     string op = ctx->RELOP()->getText();
-    string trueLabel = newLabel("rel_true");
-    string endLabel = newLabel("rel_end");
+    string trueLabel = newLabel("");
+    string endLabel = newLabel("");
+    string falseLabel = newLabel("");
 
-    if (op == "<")       emit("jl "  + trueLabel);
-    else if (op == "<=") emit("jle " + trueLabel);
-    else if (op == ">")  emit("jg "  + trueLabel);
-    else if (op == ">=") emit("jge " + trueLabel);
-    else if (op == "==") emit("je "  + trueLabel);
-    else if (op == "!=") emit("jne " + trueLabel);
+    if (op == "<")       emit("JL "  + trueLabel);
+    else if (op == "<=") emit("JLE " + trueLabel);
+    else if (op == ">")  emit("JG "  + trueLabel);
+    else if (op == ">=") emit("JGE " + trueLabel);
+    else if (op == "==") emit("JE "  + trueLabel);
+    else if (op == "!=") emit("JNE " + trueLabel);
 
-    emit("mov eax, 0");
-    emit("jmp " + endLabel);
+    emit("JMP " + falseLabel);
     emitLabel(trueLabel);
-    emit("mov eax, 1");
+    emitAtLine("MOV EAX, 1", currentExpressionLine);
+    emit("JMP " + endLabel);
+    emitLabel(falseLabel);
+    emit("MOV EAX, 0");
     emitLabel(endLabel);
 
     return {};
@@ -468,18 +537,19 @@ any ICGVisitor::visitRelBinary(CSubsetParser::RelBinaryContext* ctx)
 any ICGVisitor::visitSimpleBinary(CSubsetParser::SimpleBinaryContext* ctx)
 {
     visit(ctx->left);
-    emit("push eax");
-
+    emit("PUSH EAX");
     visit(ctx->right);
-    emit("mov ebx, eax");
-    emit("pop eax");
+    emit("MOV EDX, EAX");
+    emit("POP EAX");
 
     if (ctx->ADDOP()->getText() == "+") {
-        emit("add eax, ebx");
+        emit("ADD EAX, EDX");
     }
     else {
-        emit("sub eax, ebx");
+        emit("SUB EAX, EDX");
     }
+    emit("PUSH EAX");
+    emitAtLine("POP EAX", currentExpressionLine);
 
     return {};
 }
@@ -487,26 +557,23 @@ any ICGVisitor::visitSimpleBinary(CSubsetParser::SimpleBinaryContext* ctx)
 any ICGVisitor::visitTermBinary(CSubsetParser::TermBinaryContext* ctx)
 {
     visit(ctx->left);
-    emit("push eax");
-
+    emit("PUSH EAX");
     visit(ctx->right);
-    emit("mov ebx, eax");
-    emit("pop eax");
+    emit("MOV ECX, EAX");
+    emit("POP EAX");
 
     string op = ctx->MULOP()->getText();
 
     if (op == "*") {
-        emit("imul eax, ebx");
+        emit("IMUL EAX, ECX");
+        emit("PUSH EAX");
     }
     else {
-        // Signed division: EDX:EAX / EBX
-        emit("cdq");
-        emit("idiv ebx");
-
-        if (op == "%") {
-            emit("mov eax, edx");
-        }
+        emit("CDQ");
+        emit("IDIV ECX");
+        emit(op == "%" ? "PUSH EDX" : "PUSH EAX");
     }
+    emitAtLine("POP EAX", currentExpressionLine);
 
     return {};
 }
@@ -516,10 +583,11 @@ any ICGVisitor::visitUnaryAdd(CSubsetParser::UnaryAddContext* ctx)
     visit(ctx->operand);
 
     if (ctx->ADDOP()->getText() == "-") {
-        emit("neg eax");
+        emit("NEG EAX");
     }
 
-    // Unary + needs no instruction.
+    emit("PUSH EAX");
+    emitAtLine("POP EAX", currentExpressionLine);
     return {};
 }
 
@@ -527,15 +595,18 @@ any ICGVisitor::visitUnaryNot(CSubsetParser::UnaryNotContext* ctx)
 {
     visit(ctx->operand);
 
-    string trueLabel = newLabel("not_true");
-    string endLabel = newLabel("not_end");
+    string trueLabel = newLabel("");
+    string endLabel = newLabel("");
+    string falseLabel = newLabel("");
 
-    emit("cmp eax, 0");
-    emit("je " + trueLabel);
-    emit("mov eax, 0");
-    emit("jmp " + endLabel);
+    emit("CMP EAX, 0");
+    emit("JE " + trueLabel);
+    emit("JMP " + falseLabel);
     emitLabel(trueLabel);
-    emit("mov eax, 1");
+    emitAtLine("MOV EAX, 1", currentExpressionLine);
+    emit("JMP " + endLabel);
+    emitLabel(falseLabel);
+    emit("MOV EAX, 0");
     emitLabel(endLabel);
 
     return {};
@@ -547,14 +618,15 @@ any ICGVisitor::visitUnaryNot(CSubsetParser::UnaryNotContext* ctx)
 
 any ICGVisitor::visitFactorInt(CSubsetParser::FactorIntContext* ctx)
 {
-    emit("mov eax, " + ctx->CONST_INT()->getText());
+    emitAtLine(
+        "MOV EAX, " + ctx->CONST_INT()->getText(),
+        currentExpressionLine);
     return {};
 }
 
 any ICGVisitor::visitFactorFloat(CSubsetParser::FactorFloatContext* ctx)
 {
-    // CONST_FLOAT is highlighted in the Phase-1 grammar, but the assignment
-    // specification explicitly says floating-point operations are not required.
+    // Floating-point code generation is outside the Phase-1 requirements.
     throw runtime_error(
         "Floating-point code generation is not required by the assignment");
 
@@ -566,9 +638,12 @@ any ICGVisitor::visitFactorIncrement(CSubsetParser::FactorIncrementContext* ctx)
 {
     StorageInfo storage = lookupStorage(ctx->variable()->getText());
 
-    // Postfix semantics: EAX keeps the OLD value.
+    // Postfix semantics: EAX keeps the old value while memory gets old + 1.
     load(storage);
-    emit("inc dword " + memory(storage));
+    emit("PUSH EAX");
+    emit("INC EAX");
+    store(storage);
+    emit("POP EAX");
     return {};
 }
 
@@ -576,8 +651,11 @@ any ICGVisitor::visitFactorDecrement(CSubsetParser::FactorDecrementContext* ctx)
 {
     StorageInfo storage = lookupStorage(ctx->variable()->getText());
 
-    // Postfix semantics: EAX keeps the OLD value.
+    // Postfix semantics: EAX keeps the old value while memory gets old - 1.
     load(storage);
-    emit("dec dword " + memory(storage));
+    emit("PUSH EAX");
+    emit("DEC EAX");
+    store(storage);
+    emit("POP EAX");
     return {};
 }

@@ -1,164 +1,244 @@
 format ELF executable 3
-entry _start
-
+entry main
+segment readable writeable
+	i dd 1 DUP (0)       ; Line 1
+	j dd 1 DUP (0)       ; Line 1
 segment readable executable
+main:
+	PUSH EBP
+	MOV EBP, ESP
+	SUB ESP, 4       ; Line 4
+	SUB ESP, 4       ; Line 4
+	SUB ESP, 4       ; Line 4
+	SUB ESP, 4       ; Line 4
+	SUB ESP, 4       ; Line 4
+	SUB ESP, 4       ; Line 4
+.L1:
+	MOV EAX, 1       ; Line 6
+	MOV [i], EAX
+.L2:
+	MOV EAX, [i]       ; Line 7
+	CALL print_number
+.L3:
+	MOV EAX, 5       ; Line 9
+	PUSH EAX
+	MOV EAX, 8       ; Line 9
+	MOV EDX, EAX
+	POP EAX
+	ADD EAX, EDX
+	PUSH EAX
+	POP EAX       ; Line 9
+	MOV [j], EAX
+.L4:
+	MOV EAX, [j]       ; Line 10
+	CALL print_number
+.L5:
+	MOV EAX, [i]       ; Line 12
+	PUSH EAX
+	MOV EAX, 2       ; Line 12
+	PUSH EAX
+	MOV EAX, [j]       ; Line 12
+	MOV ECX, EAX
+	POP EAX
+	IMUL EAX, ECX
+	PUSH EAX
+	POP EAX       ; Line 12
+	MOV EDX, EAX
+	POP EAX
+	ADD EAX, EDX
+	PUSH EAX
+	POP EAX       ; Line 12
+	MOV [EBP-4], EAX
+.L6:
+	MOV EAX, [EBP-4]       ; Line 13
+	CALL print_number
+.L7:
+	MOV EAX, [EBP-4]       ; Line 15
+	PUSH EAX
+	MOV EAX, 9       ; Line 15
+	MOV ECX, EAX
+	POP EAX
+	CDQ
+	IDIV ECX
+	PUSH EDX
+	POP EAX       ; Line 15
+	MOV [EBP-12], EAX
+.L8:
+	MOV EAX, [EBP-12]       ; Line 16
+	CALL print_number
+.L9:
+	MOV EAX, [EBP-12]       ; Line 18
+	PUSH EAX
+	MOV EAX, [EBP-8]       ; Line 18
+	MOV EDX, EAX
+	POP EAX
+	CMP EAX, EDX
+	JLE .L10
+	JMP .L12
+.L10:
+	MOV EAX, 1       ; Line 18
+	JMP .L11
+.L12:
+	MOV EAX, 0
+.L11:
+	MOV [EBP-16], EAX
+.L13:
+	MOV EAX, [EBP-16]       ; Line 19
+	CALL print_number
+.L14:
+	MOV EAX, [i]       ; Line 21
+	PUSH EAX
+	MOV EAX, [j]       ; Line 21
+	MOV EDX, EAX
+	POP EAX
+	CMP EAX, EDX
+	JNE .L15
+	JMP .L17
+.L15:
+	MOV EAX, 1       ; Line 21
+	JMP .L16
+.L17:
+	MOV EAX, 0
+.L16:
+	MOV [EBP-20], EAX
+.L18:
+	MOV EAX, [EBP-20]       ; Line 22
+	CALL print_number
+.L19:
+	MOV EAX, [EBP-16]       ; Line 24
+	CMP EAX, 0
+	JNE .L21
+	JMP .L20
+.L20:
+	MOV EAX, [EBP-20]       ; Line 24
+	CMP EAX, 0
+	JNE .L21
+	JMP .L23
+.L21:
+	MOV EAX, 1       ; Line 24
+	JMP .L22
+.L23:
+	MOV EAX, 0
+.L22:
+	MOV [EBP-24], EAX
+.L24:
+	MOV EAX, [EBP-24]       ; Line 25
+	CALL print_number
+.L25:
+	MOV EAX, [EBP-16]       ; Line 27
+	CMP EAX, 0
+	JNE .L26
+	JMP .L29
+.L26:
+	MOV EAX, [EBP-20]       ; Line 27
+	CMP EAX, 0
+	JNE .L27
+	JMP .L29
+.L27:
+	MOV EAX, 1       ; Line 27
+	JMP .L28
+.L29:
+	MOV EAX, 0
+.L28:
+	MOV [EBP-24], EAX
+.L30:
+	MOV EAX, [EBP-24]       ; Line 28
+	CALL print_number
+.L31:
+	MOV EAX, [EBP-24]       ; Line 30
+	PUSH EAX
+	INC EAX
+	MOV [EBP-24], EAX
+	POP EAX
+.L32:
+	MOV EAX, [EBP-24]       ; Line 31
+	CALL print_number
+.L33:
+	MOV EAX, [EBP-24]       ; Line 33
+	NEG EAX
+	PUSH EAX
+	POP EAX       ; Line 33
+	MOV [EBP-4], EAX
+.L34:
+	MOV EAX, [EBP-4]       ; Line 34
+	CALL print_number
+.L35:
+	MOV EAX, 0       ; Line 36
+	jmp .L36
+.L36:
+	ADD ESP, 24
+	POP EBP
+	MOV EBX, EAX
+	MOV EAX, 1
+	INT 0x80
+;-------------------------------
+;         print library         
+;-------------------------------
+print_number:
+    push eax
+    push ebx
+    push ecx
+    push edx
+    push esi
+    push edi
 
-_start:
-    call main
-    mov ebx, eax
-    mov eax, 1
+    sub esp, 32             ; local buffer
+
+    test eax, eax
+    jns .positive
+
+    ; print '-'
+    push eax
+
+    sub esp, 1
+    mov byte [esp], '-'
+
+    mov eax, 4              ; sys_write
+    mov ebx, 1              ; stdout
+    mov ecx, esp
+    mov edx, 1
     int 0x80
 
+    add esp, 1
+    pop eax
 
-; Line 2: function main
-main:
-    push ebp
-    mov ebp, esp
-    ; Line 4
-    sub esp, 4
-    sub esp, 4
-    sub esp, 4
-    sub esp, 4
-    sub esp, 4
-    sub esp, 4
-    ; Line 6
-    mov eax, 1
-    mov [i], eax
-    ; Line 7
-    mov eax, [i]
-    call print_number
-    ; Line 9
-    mov eax, 5
-    push eax
-    mov eax, 8
-    mov ebx, eax
-    pop eax
-    add eax, ebx
-    mov [j], eax
-    ; Line 10
-    mov eax, [j]
-    call print_number
-    ; Line 12
-    mov eax, [i]
-    push eax
-    mov eax, 2
-    push eax
-    mov eax, [j]
-    mov ebx, eax
-    pop eax
-    imul eax, ebx
-    mov ebx, eax
-    pop eax
-    add eax, ebx
-    mov [ebp-4], eax
-    ; Line 13
-    mov eax, [ebp-4]
-    call print_number
-    ; Line 15
-    mov eax, [ebp-4]
-    push eax
-    mov eax, 9
-    mov ebx, eax
-    pop eax
-    cdq
-    idiv ebx
-    mov eax, edx
-    mov [ebp-12], eax
-    ; Line 16
-    mov eax, [ebp-12]
-    call print_number
-    ; Line 18
-    mov eax, [ebp-12]
-    push eax
-    mov eax, [ebp-8]
-    mov ebx, eax
-    pop eax
-    cmp eax, ebx
-    jle L_rel_true_1
-    mov eax, 0
-    jmp L_rel_end_2
-L_rel_true_1:
-    mov eax, 1
-L_rel_end_2:
-    mov [ebp-16], eax
-    ; Line 19
-    mov eax, [ebp-16]
-    call print_number
-    ; Line 21
-    mov eax, [i]
-    push eax
-    mov eax, [j]
-    mov ebx, eax
-    pop eax
-    cmp eax, ebx
-    jne L_rel_true_3
-    mov eax, 0
-    jmp L_rel_end_4
-L_rel_true_3:
-    mov eax, 1
-L_rel_end_4:
-    mov [ebp-20], eax
-    ; Line 22
-    mov eax, [ebp-20]
-    call print_number
-    ; Line 24
-    mov eax, [ebp-16]
-    cmp eax, 0
-    jne L_or_true_5
-    mov eax, [ebp-20]
-    cmp eax, 0
-    jne L_or_true_5
-    mov eax, 0
-    jmp L_logic_end_6
-L_or_true_5:
-    mov eax, 1
-L_logic_end_6:
-    mov [ebp-24], eax
-    ; Line 25
-    mov eax, [ebp-24]
-    call print_number
-    ; Line 27
-    mov eax, [ebp-16]
-    cmp eax, 0
-    je L_and_false_7
-    mov eax, [ebp-20]
-    cmp eax, 0
-    je L_and_false_7
-    mov eax, 1
-    jmp L_logic_end_8
-L_and_false_7:
-    mov eax, 0
-L_logic_end_8:
-    mov [ebp-24], eax
-    ; Line 28
-    mov eax, [ebp-24]
-    call print_number
-    ; Line 30
-    mov eax, [ebp-24]
-    inc dword [ebp-24]
-    ; Line 31
-    mov eax, [ebp-24]
-    call print_number
-    ; Line 33
-    mov eax, [ebp-24]
     neg eax
-    mov [ebp-4], eax
-    ; Line 34
-    mov eax, [ebp-4]
-    call print_number
-    ; Line 36
-    mov eax, 0
-    jmp L_main_exit_0
-L_main_exit_0:
-    mov esp, ebp
-    pop ebp
+
+.positive:
+    mov ebx, 10
+
+    lea esi, [esp + 31]
+    mov byte [esi], 10
+    dec esi
+
+.convert:
+    xor edx, edx
+    div ebx
+
+    add dl, '0'
+    mov [esi], dl
+    dec esi
+
+    test eax, eax
+    jnz .convert
+
+    inc esi
+
+    lea edx, [esp + 32]
+    sub edx, esi
+
+    mov eax, 4              ; sys_write
+    mov ebx, 1              ; stdout
+    mov ecx, esi
+    int 0x80
+
+    add esp, 32
+
+    pop edi
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
     ret
-
-; println helper supplied with the assignment/project
-include 'printProc.lib'
-
-segment readable writeable
-    ; Line 1
-i dd 0
-    ; Line 1
-j dd 0
+;-------------------------------
