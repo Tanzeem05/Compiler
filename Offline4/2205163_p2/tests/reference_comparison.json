@@ -1,0 +1,434 @@
+[
+  {
+    "test": "exp.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "2\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "2\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "2\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "2\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "func.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "5\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "5\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "5\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "5\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "loop.c",
+    "reference_compile": {
+      "stdout": "mapping TL1: to.L6\nmapping  to.L8\nmapping  to.L8\nmapping TL3: to.L5\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "-1\n12\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "-1\n12\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "-1\n12\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "-1\n12\n1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "recursion1_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "63\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "63\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "63\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "63\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "recursion2_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "28\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "28\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "28\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "28\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test1_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "1\n13\n27\n0\n1\n1\n1\n1\n2\n-2\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "1\n13\n27\n0\n1\n1\n1\n1\n2\n-2\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "1\n13\n27\n0\n1\n1\n1\n1\n2\n-2\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "1\n13\n27\n0\n1\n1\n1\n1\n2\n-2\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test2_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "8\n6\n3\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "8\n6\n3\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "8\n6\n3\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "8\n6\n3\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test3_i.c",
+    "reference_compile": {
+      "stdout": "mapping TL1: to.L4\nmapping  to.L2\nmapping  to.L2\nmapping  to.L3\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "0\n1\n2\n3\n4\n5\n18\n0\n18\n-1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "0\n1\n2\n3\n4\n5\n18\n0\n18\n-1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "0\n1\n2\n3\n4\n5\n18\n0\n18\n-1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "0\n1\n2\n3\n4\n5\n18\n0\n18\n-1\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test4_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "7\n8\n32\n170\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "7\n8\n32\n170\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "7\n8\n32\n170\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "7\n8\n32\n170\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test5_i.c",
+    "reference_compile": {
+      "stdout": "mapping TL4: to.L15\nmapping  to.L13\nmapping  to.L13\nmapping TL8: to.L14\nmapping TL10: to.L31\nmapping  to.L33\nmapping  to.L33\nmapping TL13: to.L30\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "25\n0\n14\n4\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "25\n0\n14\n4\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "25\n0\n14\n4\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "25\n0\n14\n4\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test6_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "-2\n-2\n-1\n-1\n100\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "-2\n-2\n-1\n-1\n100\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "-2\n-2\n-1\n-1\n100\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "-2\n-2\n-1\n-1\n100\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  },
+  {
+    "test": "test7_i.c",
+    "reference_compile": {
+      "stdout": "",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_raw": {
+      "stdout": "600\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "reference_optimized": {
+      "stdout": "600\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_compile": {
+      "stdout": "Generated code.asm and optimized_code.asm\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_raw": {
+      "stdout": "600\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "ours_optimized": {
+      "stdout": "600\n",
+      "stderr": "",
+      "exit": 0
+    },
+    "raw_matches": true,
+    "optimized_matches": true,
+    "reference_optimized_matches": true
+  }
+]

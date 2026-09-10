@@ -1,0 +1,283 @@
+--- a.out/func.asm
++++ our-compiler/func.asm
+@@ -19,6 +19,7 @@
+ 	PUSH EAX
+ 	POP EAX
+ .L2:
++	MOV EAX, 0
+ .L3:
+ 	POP EBP
+ 	RET 4
+@@ -29,7 +30,7 @@
+ .L4:
+ 	MOV EAX, [EBP+12]       ; Line 8
+ 	PUSH EAX
+-	CALL f
++	CALL f       ; Line 8
+ 	PUSH EAX
+ 	MOV EAX, [EBP+12]       ; Line 8
+ 	MOV EDX, EAX
+@@ -49,6 +50,7 @@
+ 	MOV EAX, [EBP-4]       ; Line 9
+ 	JMP .L7
+ .L6:
++	MOV EAX, 0
+ .L7:
+ 	ADD ESP, 4
+ 	POP EBP
+@@ -73,7 +75,7 @@
+ 	PUSH EAX
+ 	MOV EAX, [EBP-8]       ; Line 16
+ 	PUSH EAX
+-	CALL g
++	CALL g       ; Line 16
+ 	PUSH EAX
+ 	POP EAX       ; Line 16
+ 	MOV [EBP-4], EAX
+@@ -81,16 +83,17 @@
+ 	POP EAX
+ .L11:
+ 	MOV EAX, [EBP-4]       ; Line 17
++	PUSH EAX
+ 	CALL print_number
++	ADD ESP, 4
+ .L12:
+ 	MOV EAX, 0       ; Line 18
+ 	JMP .L14
+ .L13:
++	MOV EAX, 0
+ .L14:
+ 	ADD ESP, 8
+ 	POP EBP
++	MOV EBX, EAX
+ 	MOV EAX,1
+-	XOR EBX, EBX
+ 	INT 0x80
+-	POP EBP
+-	RET
+--- a.out/test3_i.asm
++++ our-compiler/test3_i.asm
+@@ -30,28 +30,31 @@
+ 	JMP .L2
+ .L4:
+ 	MOV EAX, [EBP-4]       ; Line 6
++	PUSH EAX
+ 	CALL print_number
++	ADD ESP, 4
+ .L5:
+ 	JMP .L3
+ .L6:
++.L7:
+ 	MOV EAX, 4       ; Line 9
+ 	MOV [EBP-12], EAX
+ 	PUSH EAX
+ 	POP EAX
+-.L7:
++.L8:
+ 	MOV EAX, 6       ; Line 10
+ 	MOV [EBP-16], EAX
+ 	PUSH EAX
+ 	POP EAX
+-.L8:
+ .L9:
++.L10:
+ 	MOV EAX, 0       ; Line 11
+ 	MOV EDX, EAX
+ 	MOV EAX, [EBP-12]       ; Line 11
+ 	CMP EAX, EDX
+-	JG .L10
+-	JMP .L13
+-.L10:
++	JG .L11
++	JMP .L14
++.L11:
+ 	MOV EAX, 3       ; Line 12
+ 	MOV EDX, EAX
+ 	MOV EAX, [EBP-16]       ; Line 12
+@@ -61,41 +64,46 @@
+ 	MOV [EBP-16], EAX
+ 	PUSH EAX
+ 	POP EAX
+-.L11:
++.L12:
+ 	MOV EAX, [EBP-12]       ; Line 13
+ 	PUSH EAX
+ 	DEC EAX
+ 	MOV [EBP-12], EAX
+ 	POP EAX
+-.L12:
+-	JMP .L9
+ .L13:
++	JMP .L10
++.L14:
++.L15:
+ 	MOV EAX, [EBP-16]       ; Line 16
++	PUSH EAX
+ 	CALL print_number
+-.L14:
++	ADD ESP, 4
++.L16:
+ 	MOV EAX, [EBP-12]       ; Line 17
++	PUSH EAX
+ 	CALL print_number
+-.L15:
++	ADD ESP, 4
++.L17:
+ 	MOV EAX, 4       ; Line 19
+ 	MOV [EBP-12], EAX
+ 	PUSH EAX
+ 	POP EAX
+-.L16:
++.L18:
+ 	MOV EAX, 6       ; Line 20
+ 	MOV [EBP-16], EAX
+ 	PUSH EAX
+ 	POP EAX
+-.L17:
+-.L18:
++.L19:
++.L20:
+ 	MOV EAX, [EBP-12]       ; Line 22
+ 	PUSH EAX
+ 	DEC EAX
+ 	MOV [EBP-12], EAX
+ 	POP EAX       ; Line 22
+ 	CMP EAX, 0
+-	JNE .L19
+-	JMP .L21
+-.L19:
++	JNE .L21
++	JMP .L23
++.L21:
+ 	MOV EAX, 3       ; Line 23
+ 	MOV EDX, EAX
+ 	MOV EAX, [EBP-16]       ; Line 23
+@@ -105,23 +113,27 @@
+ 	MOV [EBP-16], EAX
+ 	PUSH EAX
+ 	POP EAX
+-.L20:
+-	JMP .L18
+-.L21:
++.L22:
++	JMP .L20
++.L23:
++.L24:
+ 	MOV EAX, [EBP-16]       ; Line 26
++	PUSH EAX
+ 	CALL print_number
+-.L22:
++	ADD ESP, 4
++.L25:
+ 	MOV EAX, [EBP-12]       ; Line 27
++	PUSH EAX
+ 	CALL print_number
+-.L23:
++	ADD ESP, 4
++.L26:
+ 	MOV EAX, 0       ; Line 30
+-	JMP .L25
+-.L24:
+-.L25:
++	JMP .L28
++.L27:
++	MOV EAX, 0
++.L28:
+ 	ADD ESP, 16
+ 	POP EBP
++	MOV EBX, EAX
+ 	MOV EAX,1
+-	XOR EBX, EBX
+ 	INT 0x80
+-	POP EBP
+-	RET
+--- a.out/test6_i.asm
++++ our-compiler/test6_i.asm
+@@ -1,14 +1,14 @@
+ format ELF executable 3
+ entry main
+ segment readable writeable
+-	w dd 10 DUP (0)
++	w dd 10 DUP (0)       ; Line 1
+ segment readable executable
+ main:
+ 	PUSH EBP
+ 	MOV EBP, ESP
+ 	SUB ESP, 4
++	SUB ESP, 40
+ .L1:
+-	SUB ESP, 40
+ .L2:
+ 	MOV EAX, 0       ; Line 6
+ 	PUSH EAX
+@@ -67,7 +67,9 @@
+ 	POP EAX
+ .L5:
+ 	MOV EAX, [EBP-4]       ; Line 9
+-	CALL print_number
++	PUSH EAX
++	CALL print_number
++	ADD ESP, 4
+ .L6:
+ 	MOV EAX, 1       ; Line 10
+ 	PUSH EAX
+@@ -123,7 +125,9 @@
+ 	POP EAX
+ .L8:
+ 	MOV EAX, [EBP-4]       ; Line 12
+-	CALL print_number
++	PUSH EAX
++	CALL print_number
++	ADD ESP, 4
+ .L9:
+ 	MOV EAX, 0       ; Line 13
+ 	PUSH EAX
+@@ -137,7 +141,9 @@
+ 	POP EAX
+ .L10:
+ 	MOV EAX, [EBP-4]       ; Line 14
+-	CALL print_number
++	PUSH EAX
++	CALL print_number
++	ADD ESP, 4
+ .L11:
+ 	MOV EAX, 0       ; Line 16
+ 	MOV EDX, EAX
+@@ -171,7 +177,9 @@
+ 	POP EAX
+ .L14:
+ 	MOV EAX, [EBP-4]       ; Line 19
+-	CALL print_number
++	PUSH EAX
++	CALL print_number
++	ADD ESP, 4
+ .L15:
+ 	MOV EAX, 0       ; Line 21
+ 	MOV EDX, EAX
+@@ -215,17 +223,19 @@
+ 	PUSH EAX
+ 	POP EAX
+ .L21:
++.L22:
+ 	MOV EAX, [EBP-4]       ; Line 25
+-	CALL print_number
+-.L22:
++	PUSH EAX
++	CALL print_number
++	ADD ESP, 4
++.L23:
+ 	MOV EAX, 0       ; Line 27
+-	JMP .L24
+-.L23:
++	JMP .L25
+ .L24:
++	MOV EAX, 0
++.L25:
+ 	ADD ESP, 44
+ 	POP EBP
++	MOV EBX, EAX
+ 	MOV EAX,1
+-	XOR EBX, EBX
+ 	INT 0x80
+-	POP EBP
+-	RET
